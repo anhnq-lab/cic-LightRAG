@@ -1,6 +1,5 @@
-```json
 {
-  "name": "CIC Bot: Hỏi đáp & Nạp tài liệu tự động",
+  "name": "CIC Bot: LightRAG Full System (Hỏi đáp & Nạp tài liệu)",
   "nodes": [
     {
       "parameters": {
@@ -25,7 +24,6 @@
             {
               "conditions": {
                 "options": {
-                  "caseSensitive": true,
                   "leftValue": "={{ $json.message.text }}",
                   "type": "string"
                 },
@@ -40,7 +38,6 @@
             {
               "conditions": {
                 "options": {
-                  "caseSensitive": true,
                   "leftValue": "={{ $json.message.document }}",
                   "type": "string"
                 },
@@ -57,7 +54,7 @@
         "fallbackOutput": 2
       },
       "id": "route-msg",
-      "name": "Phân loại tin nhắn",
+      "name": "Kiểm tra loại tin nhắn",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 1,
       "position": [
@@ -71,16 +68,16 @@
         "promptType": "define",
         "text": "={{ $json.message.text }}",
         "options": {
-          "systemMessage": "Bạn là trợ lý tri thức của CIC. Hãy dùng LightRAG để trả lời câu hỏi."
+          "systemMessage": "Bạn là trợ lý tri thức thông minh của CIC. Nhiệm vụ: Sử dụng công cụ lightrag_query để trả lời mọi câu hỏi dựa trên kiến thức doanh nghiệp. Trả lời hoàn toàn bằng tiếng Việt."
         }
       },
       "id": "ai-agent",
-      "name": "AI Agent",
+      "name": "AI Agent1",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 1.6,
       "position": [
         450,
-        200
+        150
       ]
     },
     {
@@ -90,27 +87,21 @@
         "download": true
       },
       "id": "get-file",
-      "name": "Tải file từ Telegram",
+      "name": "Tải file Telegram",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1,
       "position": [
         450,
         450
-      ],
-      "credentials": {
-        "telegramApi": {
-          "id": "1",
-          "name": "Telegram Bot API"
-        }
-      }
+      ]
     },
     {
       "parameters": {
         "operation": "pdf",
         "binaryPropertyName": "data"
       },
-      "id": "extract-text",
-      "name": "Trích xuất tài liệu",
+      "id": "extract-pdf",
+      "name": "Đọc PDF",
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
@@ -133,12 +124,12 @@
           ]
         }
       },
-      "id": "insert-lightrag",
-      "name": "Nạp vào LightRAG",
+      "id": "insert-api",
+      "name": "Gửi vào LightRAG API",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        850,
+        880,
         450
       ]
     },
@@ -148,13 +139,88 @@
         "text": "✅ Đã nạp kiến thức mới thành công! Anh có thể hỏi em về tài liệu này rồi ạ.",
         "additionalFields": {}
       },
-      "id": "confirm-msg",
-      "name": "Thông báo thành công",
+      "id": "success-notify",
+      "name": "Báo thành công",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1,
       "position": [
-        1050,
+        1100,
         450
+      ]
+    },
+    {
+      "parameters": {
+        "name": "lightrag_query",
+        "description": "Tra cứu tài liệu CIC. Đầu vào là câu hỏi.",
+        "workflowId": "={{ $workflow.id }}",
+        "method": "POST",
+        "url": "https://web-production-your-link.up.railway.app/api/lightrag/query",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ $json.query }}"
+            },
+            {
+              "name": "mode",
+              "value": "hybrid"
+            }
+          ]
+        }
+      },
+      "id": "tool-node",
+      "name": "LightRAG Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        680,
+        50
+      ]
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.message.from.id }}",
+        "contextWindowLength": 10
+      },
+      "id": "memory-node",
+      "name": "Bộ nhớ",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.2,
+      "position": [
+        680,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gemini-1.5-flash"
+      },
+      "id": "gemini-node",
+      "name": "Google Gemini",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        680,
+        250
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "final-reply",
+      "name": "Gửi câu trả lời",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        150
       ]
     }
   ],
@@ -163,73 +229,107 @@
       "main": [
         [
           {
-            "node": "Phân loại tin nhắn",
+            "node": "Kiểm tra loại tin nhắn",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Phân loại tin nhắn": {
+    "Kiểm tra loại tin nhắn": {
       "main": [
         [
           {
-            "node": "AI Agent",
+            "node": "AI Agent1",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Tải file từ Telegram",
+            "node": "Tải file Telegram",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Tải file từ Telegram": {
+    "AI Agent1": {
       "main": [
         [
           {
-            "node": "Trích xuất tài liệu",
+            "node": "Gửi câu trả lời",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Trích xuất tài liệu": {
+    "Tải file Telegram": {
       "main": [
         [
           {
-            "node": "Nạp vào LightRAG",
+            "node": "Đọc PDF",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Nạp vào LightRAG": {
+    "Đọc PDF": {
       "main": [
         [
           {
-            "node": "Thông báo thành công",
+            "node": "Gửi vào LightRAG API",
             "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gửi vào LightRAG API": {
+      "main": [
+        [
+          {
+            "node": "Báo thành công",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LightRAG Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bộ nhớ": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
             "index": 0
           }
         ]
       ]
     }
-  },
-  "pinData": {},
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "staticData": null,
-  "tags": [],
-  "triggerCount": 1,
-  "updatedAt": "2026-01-20T03:48:00.000Z",
-  "versionId": "1"
+  }
 }
-```
