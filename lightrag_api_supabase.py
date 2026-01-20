@@ -20,20 +20,28 @@ if not os.path.exists(WORKING_DIR):
 # Nếu anh đã cấu hình POSTGRES_HOST, POSTGRES_USER, v.v. trên Railway/Render, 
 # các lớp PGKVStorage, PGVectorStorage sẽ tự động kết nối.
 
+# Khởi tạo LightRAG với PostgreSQL Storage
 try:
+    # Ưu tiên các biến môi trường POSTGRES_... cho lightrag-hku
+    # Nếu không có, có thể cấu hình qua db_config
     rag = LightRAG(
         working_dir=WORKING_DIR,
-        # Sử dụng PostgreSQL cho tất cả các loại lưu trữ
         kv_storage="PGKVStorage",
         vector_storage="PGVectorStorage",
         graph_storage="PGGraphStorage",
         doc_status_storage="PGDocStatusStorage",
-        # Các tham số khác như LLM, Embedding sẽ lấy từ biến môi trường mặc định (OpenAI)
+        # Một số phiên bản lightrag-hku hỗ trợ cấu hình DB qua db_config nếu env ko có
+        db_config={
+            "host": os.getenv("POSTGRES_HOST"),
+            "port": int(os.getenv("POSTGRES_PORT", 5432)),
+            "user": os.getenv("POSTGRES_USER"),
+            "password": os.getenv("POSTGRES_PASSWORD"),
+            "database": os.getenv("POSTGRES_DATABASE"),
+        }
     )
     logger.info("LightRAG initialized successfully with PostgreSQL backend.")
 except Exception as e:
     logger.error(f"Failed to initialize LightRAG: {str(e)}")
-    # Fallback hoặc thông báo lỗi cụ thể hơn ở đây nếu cần
 
 class QueryRequest(BaseModel):
     query: str
