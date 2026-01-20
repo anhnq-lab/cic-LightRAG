@@ -1,5 +1,5 @@
 {
-  "name": "CIC Bot: LightRAG Full System (Hỏi đáp & Nạp tài liệu)",
+  "name": "CIC Bot: LightRAG Full System (Fixed Import)",
   "nodes": [
     {
       "parameters": {
@@ -23,12 +23,9 @@
           "values": [
             {
               "conditions": {
-                "options": {
-                  "leftValue": "={{ $json.message.text }}",
-                  "type": "string"
-                },
                 "conditions": [
                   {
+                    "leftValue": "={{ $json.message.text }}",
                     "operator": "isNotEmpty"
                   }
                 ]
@@ -37,12 +34,9 @@
             },
             {
               "conditions": {
-                "options": {
-                  "leftValue": "={{ $json.message.document }}",
-                  "type": "string"
-                },
                 "conditions": [
                   {
+                    "leftValue": "={{ $json.message.document }}",
                     "operator": "isNotEmpty"
                   }
                 ]
@@ -67,14 +61,12 @@
         "agent": "conversationalAgent",
         "promptType": "define",
         "text": "={{ $json.message.text }}",
-        "options": {
-          "systemMessage": "Bạn là trợ lý tri thức thông minh của CIC. Nhiệm vụ: Sử dụng công cụ lightrag_query để trả lời mọi câu hỏi dựa trên kiến thức doanh nghiệp. Trả lời hoàn toàn bằng tiếng Việt."
-        }
+        "options": {}
       },
       "id": "ai-agent",
       "name": "AI Agent1",
       "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 1.6,
+      "typeVersion": 1,
       "position": [
         450,
         150
@@ -127,7 +119,7 @@
       "id": "insert-api",
       "name": "Gửi vào LightRAG API",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
+      "typeVersion": 1,
       "position": [
         880,
         450
@@ -136,8 +128,7 @@
     {
       "parameters": {
         "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
-        "text": "✅ Đã nạp kiến thức mới thành công! Anh có thể hỏi em về tài liệu này rồi ạ.",
-        "additionalFields": {}
+        "text": "✅ Đã nạp kiến thức mới thành công! Anh có thể hỏi em về tài liệu này rồi ạ."
       },
       "id": "success-notify",
       "name": "Báo thành công",
@@ -172,7 +163,7 @@
       "id": "tool-node",
       "name": "LightRAG Tool",
       "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
-      "typeVersion": 1.1,
+      "typeVersion": 1,
       "position": [
         680,
         50
@@ -181,13 +172,12 @@
     {
       "parameters": {
         "sessionIdType": "customKey",
-        "sessionKey": "={{ $json.message.from.id }}",
-        "contextWindowLength": 10
+        "sessionKey": "={{ $json.message.from.id }}"
       },
       "id": "memory-node",
       "name": "Bộ nhớ",
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
-      "typeVersion": 1.2,
+      "typeVersion": 1,
       "position": [
         680,
         150
@@ -209,10 +199,7 @@
     {
       "parameters": {
         "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
-        "text": "={{ $json.output }}",
-        "additionalFields": {
-          "parse_mode": "Markdown"
-        }
+        "text": "={{ $json.output }}"
       },
       "id": "final-reply",
       "name": "Gửi câu trả lời",
