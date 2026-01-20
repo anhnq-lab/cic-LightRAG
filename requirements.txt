@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+pydantic
+lightrag-hku
+python-multipart
+# Thêm các thư viện cần thiết cho Supabase nếu dùng storage backend cụ thể
+psycopg2-binary
+python-dotenv
